@@ -19,7 +19,9 @@ resource "aws_vpc" "main" {
   enable_dns_hostnames = true
   tags                 = { Name = "${var.lastname}-vpc" }
 }
-resource "aws_internet_gateway" "igw" { vpc_id = aws_vpc.main.id }
+resource "aws_internet_gateway" "igw" { 
+  vpc_id = aws_vpc.main.id 
+}
 
 resource "aws_subnet" "public" {
   count             = 2
@@ -71,12 +73,18 @@ resource "aws_security_group" "alb_sg" {
   name   = "${var.lastname}-alb-sg"
   vpc_id = aws_vpc.main.id
   ingress {
-    from_port = 80
-    to_port   = 80
-    protocol  = "tcp"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  egress { from_port = 0; to_port = 0; protocol = "-1"; cidr_blocks = ["0.0.0.0/0"] }
+  # Corrected egress block
+  egress { 
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"] 
+  }
 }
 resource "aws_security_group" "ecs_sg" {
   name   = "${var.lastname}-ecs-sg"
@@ -87,14 +95,22 @@ resource "aws_security_group" "ecs_sg" {
     protocol        = "tcp"
     security_groups = [aws_security_group.alb_sg.id]
   }
-  egress { from_port = 0; to_port = 0; protocol = "-1"; cidr_blocks = ["0.0.0.0/0"] }
+  # Corrected egress block
+  egress { 
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"] 
+  }
 }
 
 # --- RESOURCES ---
 resource "aws_ecr_repository" "repo" {
   name         = "${var.lastname}-repo"
   force_delete = true
-  image_scanning_configuration { scan_on_push = true }
+  image_scanning_configuration { 
+    scan_on_push = true 
+  }
 }
 
 resource "aws_lb" "alb" {
@@ -135,7 +151,7 @@ resource "aws_iam_role_policy_attachment" "exec_att" {
 }
 
 resource "aws_ecs_task_definition" "task" {
-  family                   = "${var.lastname}-task"
+  family                  = "${var.lastname}-task"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = "256"
@@ -182,7 +198,9 @@ resource "aws_iam_role" "cp_role" {
   })
 }
 resource "aws_iam_role_policy_attachment" "cp_admin" {
-  role = aws_iam_role.cp_role.name; policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+  # Corrected
+  role       = aws_iam_role.cp_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }
 resource "aws_iam_role" "cb_role" {
   name = "${var.lastname}-codebuild-role"
@@ -191,7 +209,9 @@ resource "aws_iam_role" "cb_role" {
   })
 }
 resource "aws_iam_role_policy_attachment" "cb_admin" {
-  role = aws_iam_role.cb_role.name; policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+  # Corrected
+  role       = aws_iam_role.cb_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }
 
 resource "aws_codebuild_project" "build" {
@@ -204,37 +224,80 @@ resource "aws_codebuild_project" "build" {
     type            = "LINUX_CONTAINER"
     privileged_mode = true
   }
-  source { type = "CODEPIPELINE"; buildspec = "buildspec.yml" }
+  # Corrected source block
+  source { 
+    type      = "CODEPIPELINE"
+    buildspec = "buildspec.yml" 
+  }
 }
 
 resource "aws_codepipeline" "pipeline" {
   name     = "${var.lastname}-pipeline"
   role_arn = aws_iam_role.cp_role.arn
-  artifact_store { location = aws_s3_bucket.artifacts.bucket; type = "S3" }
+  # Corrected artifact_store block
+  artifact_store { 
+    location = aws_s3_bucket.artifacts.bucket
+    type     = "S3" 
+  }
 
   stage {
     name = "Source"
+    # Corrected Source action
     action {
-      name = "Source"; category = "Source"; owner = "AWS"; provider = "CodeStarSourceConnection"; version = "1"; output_artifacts = ["source_output"]
-      configuration = { ConnectionArn = var.codestar_arn; FullRepositoryId = var.github_repo; BranchName = "main" }
+      name             = "Source"
+      category         = "Source"
+      owner            = "AWS"
+      provider         = "CodeStarSourceConnection"
+      version          = "1"
+      output_artifacts = ["source_output"]
+      configuration = { 
+        ConnectionArn    = var.codestar_arn
+        FullRepositoryId = var.github_repo
+        BranchName       = "main" 
+      }
     }
   }
   stage {
     name = "Build"
+    # Corrected Build action
     action {
-      name = "Build"; category = "Build"; owner = "AWS"; provider = "CodeBuild"; input_artifacts = ["source_output"]; output_artifacts = ["build_output"]; version = "1"
-      configuration = { ProjectName = aws_codebuild_project.build.name }
+      name             = "Build"
+      category         = "Build"
+      owner            = "AWS"
+      provider         = "CodeBuild"
+      input_artifacts  = ["source_output"]
+      output_artifacts = ["build_output"]
+      version          = "1"
+      configuration = { 
+        ProjectName = aws_codebuild_project.build.name 
+      }
     }
   }
   stage {
     name = "Approval"
-    action { name = "Approval"; category = "Approval"; owner = "AWS"; provider = "Manual"; version = "1" }
+    # Corrected Approval action
+    action { 
+      name     = "Approval"
+      category = "Approval"
+      owner    = "AWS"
+      provider = "Manual"
+      version  = "1" 
+    }
   }
   stage {
     name = "Deploy"
+    # Corrected Deploy action
     action {
-      name = "Deploy"; category = "Deploy"; owner = "AWS"; provider = "ECS"; input_artifacts = ["build_output"]; version = "1"
-      configuration = { ClusterName = aws_ecs_cluster.cluster.name; ServiceName = aws_ecs_service.service.name }
+      name            = "Deploy"
+      category        = "Deploy"
+      owner           = "AWS"
+      provider        = "ECS"
+      input_artifacts = ["build_output"]
+      version         = "1"
+      configuration = { 
+        ClusterName = aws_ecs_cluster.cluster.name
+        ServiceName = aws_ecs_service.service.name 
+      }
     }
   }
 }
