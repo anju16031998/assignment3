@@ -12,10 +12,13 @@ phases:
       - echo "Installing dependencies..."
   pre_build:
     commands:
+      - echo "Listing files received from Source stage:"
+      - ls -R  # <--- ADD THIS LINE! This will list all files recursively.
       - echo Logging in to Amazon ECR...
       - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_URI
       - REPOSITORY_URI=$ECR_URI
       - IMAGE_TAG=latest
+# ... rest of the file remains the same
   build:
     commands:
       - echo Building the Docker image...
