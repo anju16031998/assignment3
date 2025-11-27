@@ -4,7 +4,7 @@ env:
   variables:
     AWS_REGION: "us-east-1"
     # REPLACE WITH YOUR REAL ID AND REPO NAME
-    ECR_URI: "002540790985.dkr.ecr.us-east-1.amazonaws.com/assignment3"
+    ECR_URI: "002540790985.dkr.ecr.us-east-1.amazonaws.com/anju-repo"
 
 phases:
   install:
